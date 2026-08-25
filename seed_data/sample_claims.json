@@ -1,0 +1,37 @@
+[
+  {
+    "customer_name": "Ahmed Benali",
+    "customer_email": "ahmed.benali@email.com",
+    "raw_description": "I had a car accident yesterday in Casablanca. Another vehicle hit my car at an intersection. The front bumper and hood are damaged. I estimate the repair will cost around $3,000. I have the other driver's license plate number.",
+    "incident_type": "Car accident",
+    "incident_location": "Casablanca"
+  },
+  {
+    "customer_name": "Fatima Zahra",
+    "customer_email": "fatima.zahra@email.com",
+    "raw_description": "My apartment was flooded last week due to a pipe burst in the building. The living room and kitchen are damaged. Furniture worth $5,000 was destroyed. Water damage to the walls and floor.",
+    "incident_type": "Water damage",
+    "incident_location": "Rabat"
+  },
+  {
+    "customer_name": "Youssef Alami",
+    "customer_email": "youssef@email.com",
+    "raw_description": "I need to file a claim for my stolen laptop. It was taken from my hotel room in Marrakech while I was at dinner. The laptop is a MacBook Pro worth $2,500. I have a police report.",
+    "incident_type": "Theft",
+    "incident_location": "Marrakech"
+  },
+  {
+    "customer_name": "Sara Idrissi",
+    "customer_email": "sara.idrissi@email.com",
+    "raw_description": "There was a fire in my shop last night. The fire started from an electrical fault. The entire inventory was destroyed. I estimate the total loss at $15,000. The fire brigade came and confirmed it was an electrical issue.",
+    "incident_type": "Fire",
+    "incident_location": "Tangier"
+  },
+  {
+    "customer_name": "Omar Tazi",
+    "customer_email": "omar.tazi@email.com",
+    "raw_description": "I was involved in a minor car accident. My car was parked and someone hit it and drove away. I found a dent on the rear bumper. Repair should be around $800.",
+    "incident_type": "Car accident",
+    "incident_location": "Fez"
+  }
+]
