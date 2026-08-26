@@ -9,8 +9,8 @@ EXTRACTION_PROMPT = """You are an insurance claim analysis assistant.
 Given the following customer claim description, extract structured information.
 
 Return a JSON object with exactly this structure:
-{
-  "extracted_data": {
+{{
+  "extracted_data": {{
     "incident_type": "string or null",
     "incident_date": "YYYY-MM-DD or null",
     "incident_location": "string or null",
@@ -18,9 +18,9 @@ Return a JSON object with exactly this structure:
     "damage_description": "string or null",
     "other_party_info": "string or null",
     "policy_number": "string or null"
-  },
+  }},
   "missing_fields": ["list of required fields that are missing or unclear"],
-  "confidence_scores": {
+  "confidence_scores": {{
     "incident_type": 0.0 to 1.0,
     "incident_date": 0.0 to 1.0,
     "incident_location": 0.0 to 1.0,
@@ -28,8 +28,8 @@ Return a JSON object with exactly this structure:
     "damage_description": 0.0 to 1.0,
     "other_party_info": 0.0 to 1.0,
     "policy_number": 0.0 to 1.0
-  }
-}
+  }}
+}}
 
 Rules:
 - Only extract information that is explicitly stated or clearly implied
