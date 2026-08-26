@@ -11,7 +11,7 @@ from app.models.extraction import ClaimExtraction
 from app.models.conversation import Conversation
 from app.services.claim_service import update_claim_status
 
-client = AsyncOpenAI(api_key=settings.OPENAI_API_KEY)
+client = AsyncOpenAI(api_key=settings.GROQ_API_KEY, base_url=settings.GROQ_BASE_URL)
 
 
 async def run_extraction(db: AsyncSession, claim_id: UUID) -> ClaimExtraction:
@@ -55,7 +55,7 @@ Return ONLY a JSON array of strings, e.g. ["Question 1?", "Question 2?"]
 No markdown, no explanation."""
 
     response = await client.chat.completions.create(
-        model=settings.OPENAI_MODEL,
+        model=settings.GROQ_MODEL,
         messages=[{"role": "user", "content": prompt}],
         temperature=0.3,
         response_format={"type": "json_object"},
@@ -108,7 +108,7 @@ Return a JSON object with:
 Respond ONLY with valid JSON, no markdown."""
 
         response = await client.chat.completions.create(
-            model=settings.OPENAI_MODEL,
+            model=settings.GROQ_MODEL,
             messages=[{"role": "user", "content": prompt}],
             temperature=0.1,
             response_format={"type": "json_object"},

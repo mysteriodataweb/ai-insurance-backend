@@ -2,7 +2,7 @@ import json
 from openai import AsyncOpenAI
 from app.config import settings
 
-client = AsyncOpenAI(api_key=settings.OPENAI_API_KEY)
+client = AsyncOpenAI(api_key=settings.GROQ_API_KEY, base_url=settings.GROQ_BASE_URL)
 
 EXTRACTION_PROMPT = """You are an insurance claim analysis assistant.
 
@@ -49,7 +49,7 @@ async def extract_claim_info(description: str) -> dict:
     prompt = EXTRACTION_PROMPT.format(description=description, today=today)
 
     response = await client.chat.completions.create(
-        model=settings.OPENAI_MODEL,
+        model=settings.GROQ_MODEL,
         messages=[{"role": "user", "content": prompt}],
         temperature=0.1,
         response_format={"type": "json_object"},
