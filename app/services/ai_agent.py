@@ -51,7 +51,7 @@ Missing fields: {missing}
 Original claim: "{claim.raw_description}"
 
 Generate 1-3 specific, polite follow-up questions to collect the missing information.
-Return ONLY a JSON array of strings, e.g. ["Question 1?", "Question 2?"]
+Return a JSON object with a "questions" key containing an array of strings, e.g. {{"questions": ["Question 1?", "Question 2?"]}}
 No markdown, no explanation."""
 
     response = await client.chat.completions.create(
