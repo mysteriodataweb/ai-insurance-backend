@@ -26,8 +26,7 @@ app.include_router(dashboard_router)
 
 @app.on_event("startup")
 async def startup():
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
+    pass
 
 
 @app.get("/")
