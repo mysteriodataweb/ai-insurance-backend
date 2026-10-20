@@ -1,28 +1,18 @@
 @echo off
 echo ========================================
-echo  AI Insurance Operations Platform
+echo  AI Insurance Operations Platform - Backend
 echo ========================================
 echo.
 
-REM Check if Python is available
 python --version >nul 2>&1
 if %errorlevel% neq 0 (
-    echo Python not found. Please install Python 3.10+
+    echo Python not found. Please install Python 3.11+
     pause
     exit /b 1
 )
 
-REM Check if Node.js is available
-node --version >nul 2>&1
-if %errorlevel% neq 0 (
-    echo Node.js not found. Please install Node.js 18+
-    pause
-    exit /b 1
-)
-
-echo [1/4] Installing backend dependencies...
-cd backend
-pip install -r requirements.txt
+echo [1/3] Installing backend dependencies...
+pip install -r requirements-dev.txt
 if %errorlevel% neq 0 (
     echo Failed to install backend dependencies
     pause
@@ -30,42 +20,23 @@ if %errorlevel% neq 0 (
 )
 
 echo.
-echo [2/4] Copying .env if not exists...
+echo [2/3] Copying .env if not exists...
 if not exist .env (
     copy .env.example .env
-    echo .env created from .env.example - Please configure DATABASE_URL and OPENAI_API_KEY
+    echo .env created from .env.example - configure DATABASE_URL, GROQ_API_KEY and SECRET_KEY
 )
 
 echo.
-echo [3/4] Installing frontend dependencies...
-cd ..\frontend
-call npm install
-if %errorlevel% neq 0 (
-    echo Failed to install frontend dependencies
-    pause
-    exit /b 1
-)
-
-echo.
-echo [4/4] Setup complete!
+echo [3/3] Setup complete!
 echo.
 echo ========================================
-echo  To run the platform:
+echo  Next steps:
 echo.
-echo  1. Start PostgreSQL and create database:
-echo     CREATE DATABASE ai_insurance;
+echo  1. Configure .env (DATABASE_URL, GROQ_API_KEY, SECRET_KEY)
+echo  2. Seed the database (empty database only):  python seed.py
+echo  3. Start the API:                            uvicorn app.main:app --reload
+echo  4. Run the tests:                            pytest
 echo.
-echo  2. Configure backend/.env with your DATABASE_URL
-echo.
-echo  3. Seed the database:
-echo     cd backend ^& python seed.py
-echo.
-echo  4. Start backend (Terminal 1):
-echo     cd backend ^& uvicorn app.main:app --reload
-echo.
-echo  5. Start frontend (Terminal 2):
-echo     cd frontend ^& npm run dev
-echo.
-echo  6. Open http://localhost:3000
+echo  Frontend: see the ai-insurance-frontend repository.
 echo ========================================
 pause

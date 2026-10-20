@@ -1,10 +1,10 @@
 import uuid
-from datetime import datetime
 from sqlalchemy import Column, String, Text, Integer, DateTime, ForeignKey, Enum as SAEnum
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.orm import relationship
 
 from app.database import Base
+from app.timeutils import utcnow
 
 
 class RiskAssessment(Base):
@@ -17,6 +17,6 @@ class RiskAssessment(Base):
     signals = Column(JSONB, nullable=False, default=list)
     explanation = Column(Text, nullable=False)
     recommended_action = Column(Text, nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime, default=utcnow, nullable=False)
 
     claim = relationship("Claim", back_populates="risk_assessment")

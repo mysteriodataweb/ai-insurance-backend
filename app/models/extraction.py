@@ -1,10 +1,10 @@
 import uuid
-from datetime import datetime
 from sqlalchemy import Column, String, DateTime, ForeignKey
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.orm import relationship
 
 from app.database import Base
+from app.timeutils import utcnow
 
 
 class ClaimExtraction(Base):
@@ -16,6 +16,6 @@ class ClaimExtraction(Base):
     missing_fields = Column(JSONB, nullable=False, default=list)
     confidence_scores = Column(JSONB, nullable=False, default=dict)
     extraction_raw = Column(JSONB, nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime, default=utcnow, nullable=False)
 
     claim = relationship("Claim", back_populates="extraction")

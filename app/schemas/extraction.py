@@ -1,7 +1,8 @@
-from datetime import datetime
 from typing import Optional
 from uuid import UUID
 from pydantic import BaseModel
+
+from app.schemas.common import UTCDateTime
 
 
 class ExtractionResponse(BaseModel):
@@ -11,6 +12,6 @@ class ExtractionResponse(BaseModel):
     missing_fields: list
     confidence_scores: dict
     extraction_raw: Optional[dict]
-    created_at: datetime
+    created_at: UTCDateTime
 
     model_config = {"from_attributes": True}

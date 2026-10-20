@@ -1,10 +1,10 @@
 import uuid
-from datetime import datetime
 from sqlalchemy import Column, String, Text, DateTime, ForeignKey, Enum as SAEnum
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.orm import relationship
 
 from app.database import Base
+from app.timeutils import utcnow
 
 
 class ClaimAction(Base):
@@ -18,7 +18,7 @@ class ClaimAction(Base):
     )
     performed_by = Column(String(255), nullable=False)
     notes = Column(Text, nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime, default=utcnow, nullable=False)
 
     claim = relationship("Claim", back_populates="actions")
 
@@ -31,6 +31,6 @@ class AuditLog(Base):
     event_type = Column(String(100), nullable=False)
     event_data = Column(JSONB, nullable=False, default=dict)
     actor = Column(String(50), nullable=False, default="system")
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime, default=utcnow, nullable=False)
 
     claim = relationship("Claim", back_populates="audit_logs")

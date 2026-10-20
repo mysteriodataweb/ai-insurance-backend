@@ -1,10 +1,10 @@
 import uuid
-from datetime import datetime
 from sqlalchemy import Column, String, Text, DateTime, ForeignKey, Enum as SAEnum
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 
 from app.database import Base
+from app.timeutils import utcnow
 
 
 class Conversation(Base):
@@ -18,6 +18,6 @@ class Conversation(Base):
         SAEnum("question", "answer", "info_request", "system", name="message_type"),
         nullable=False,
     )
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime, default=utcnow, nullable=False)
 
     claim = relationship("Claim", back_populates="conversations")

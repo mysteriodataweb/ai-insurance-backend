@@ -1,58 +1,112 @@
-import json
-from openai import AsyncOpenAI
-from app.config import settings
+import re
+from datetime import date
+from typing import Any, Optional
 
-client = AsyncOpenAI(api_key=settings.GROQ_API_KEY, base_url=settings.GROQ_BASE_URL)
+from pydantic import BaseModel, ConfigDict, ValidationError, field_validator
 
-EXTRACTION_PROMPT = """You are an insurance claim analysis assistant.
+from app.errors import LLMError
+from app.prompts import EXTRACTION_SYSTEM_PROMPT, wrap_untrusted
+from app.services.llm import complete_json
 
-Given the following customer claim description, extract structured information.
+EXTRACTION_FIELDS = (
+    "incident_type",
+    "incident_date",
+    "incident_location",
+    "estimated_amount",
+    "damage_description",
+    "other_party_info",
+    "policy_number",
+)
 
-Return a JSON object with exactly this structure:
-{{
-  "extracted_data": {{
-    "incident_type": "string or null",
-    "incident_date": "YYYY-MM-DD or null",
-    "incident_location": "string or null",
-    "estimated_amount": "number or null",
-    "damage_description": "string or null",
-    "other_party_info": "string or null",
-    "policy_number": "string or null"
-  }},
-  "missing_fields": ["list of required fields that are missing or unclear"],
-  "confidence_scores": {{
-    "incident_type": 0.0 to 1.0,
-    "incident_date": 0.0 to 1.0,
-    "incident_location": 0.0 to 1.0,
-    "estimated_amount": 0.0 to 1.0,
-    "damage_description": 0.0 to 1.0,
-    "other_party_info": 0.0 to 1.0,
-    "policy_number": 0.0 to 1.0
-  }}
-}}
-
-Rules:
-- Only extract information that is explicitly stated or clearly implied
-- Set confidence to 0.0 for information you are uncertain about
-- Never invent information
-- If the date is relative (yesterday, last week), calculate the actual date based on today: {today}
-
-Customer claim:
-\"\"\"{description}\"\"\"
-
-Respond ONLY with valid JSON, no markdown, no explanation."""
+_NULL_STRINGS = {"", "null", "none", "n/a", "na", "unknown", "not provided", "not specified"}
 
 
-async def extract_claim_info(description: str) -> dict:
-    from datetime import date
-    today = date.today().isoformat()
-    prompt = EXTRACTION_PROMPT.format(description=description, today=today)
+class ExtractedData(BaseModel):
+    """LLM output is coerced field by field: anything unusable becomes null instead of failing."""
 
-    response = await client.chat.completions.create(
-        model=settings.GROQ_MODEL,
-        messages=[{"role": "user", "content": prompt}],
-        temperature=0.1,
-        response_format={"type": "json_object"},
-    )
+    model_config = ConfigDict(extra="ignore")
 
-    return json.loads(response.choices[0].message.content)
+    incident_type: Optional[str] = None
+    incident_date: Optional[date] = None
+    incident_location: Optional[str] = None
+    estimated_amount: Optional[float] = None
+    damage_description: Optional[str] = None
+    other_party_info: Optional[str] = None
+    policy_number: Optional[str] = None
+
+    @field_validator("*", mode="before")
+    @classmethod
+    def null_like_to_none(cls, value: Any) -> Any:
+        if isinstance(value, str) and value.strip().lower() in _NULL_STRINGS:
+            return None
+        return value
+
+    @field_validator("incident_type", "incident_location", "damage_description", "other_party_info", "policy_number", mode="before")
+    @classmethod
+    def to_text(cls, value: Any) -> Optional[str]:
+        if value is None:
+            return None
+        if isinstance(value, (dict, list)):
+            return None
+        return str(value).strip()[:500] or None
+
+    @field_validator("incident_date", mode="before")
+    @classmethod
+    def to_date(cls, value: Any) -> Optional[date]:
+        if value is None or isinstance(value, date):
+            return value
+        try:
+            return date.fromisoformat(str(value).strip()[:10])
+        except ValueError:
+            return None
+
+    @field_validator("estimated_amount", mode="before")
+    @classmethod
+    def to_amount(cls, value: Any) -> Optional[float]:
+        if value is None or isinstance(value, bool):
+            return None
+        if isinstance(value, str):
+            value = re.sub(r"[^\d.\-]", "", value)
+        try:
+            amount = float(value)
+        except (TypeError, ValueError):
+            return None
+        return amount if 0 < amount < 1e10 else None
+
+
+class ExtractionResult(BaseModel):
+    extracted_data: ExtractedData
+    confidence_scores: dict[str, float]
+
+
+def _to_score(value: Any) -> float:
+    try:
+        score = float(value)
+    except (TypeError, ValueError):
+        return 0.0
+    return min(max(score, 0.0), 1.0)
+
+
+def parse_extraction(raw: dict) -> ExtractionResult:
+    data = raw.get("extracted_data")
+    if not isinstance(data, dict):
+        raise LLMError("AI extraction did not return 'extracted_data'.")
+    try:
+        extracted = ExtractedData.model_validate(data)
+    except ValidationError as exc:
+        raise LLMError("AI extraction returned malformed data.") from exc
+
+    scores_raw = raw.get("confidence_scores")
+    scores_raw = scores_raw if isinstance(scores_raw, dict) else {}
+    values = extracted.model_dump()
+    scores = {}
+    for field in EXTRACTION_FIELDS:
+        # A field the model could not extract carries no confidence, whatever it claims.
+        scores[field] = _to_score(scores_raw.get(field)) if values[field] is not None else 0.0
+    return ExtractionResult(extracted_data=extracted, confidence_scores=scores)
+
+
+async def extract_claim_info(description: str, today: date) -> tuple[ExtractionResult, dict]:
+    system_prompt = EXTRACTION_SYSTEM_PROMPT.replace("{today}", today.isoformat())
+    raw = await complete_json(system_prompt, wrap_untrusted("claim_description", description), temperature=0.1)
+    return parse_extraction(raw), raw
