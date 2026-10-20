@@ -152,6 +152,11 @@ async def test_submission_runs_ai_pipeline_and_audit_trail(client, llm):
     assert res.json() == {"status": "ready_for_review", "still_missing": []}
     detail = (await client.get(f"/api/claims/{claim['id']}", headers=headers)).json()
     assert detail["policy_number"] == "POL-9"
+    extraction = (await client.get(f"/api/agent/extraction/{claim['id']}", headers=headers)).json()
+    assert extraction["confidence_scores"]["policy_number"] == 1.0
+
+    risk = (await client.post(f"/api/risk/assess/{claim['id']}", headers=headers)).json()
+    assert not any("confidence" in s for s in risk["signals"])
 
 
 async def test_pipeline_failure_is_recorded(client, llm):

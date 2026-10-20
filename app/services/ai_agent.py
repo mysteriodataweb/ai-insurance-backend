@@ -136,6 +136,8 @@ async def process_customer_response(db: AsyncSession, claim: Claim, response_tex
     missing = compute_missing_fields(claim, merged)
     extraction.extracted_data = merged
     extraction.missing_fields = missing
+    # Facts the customer stated directly are no longer AI guesses.
+    extraction.confidence_scores = {**(extraction.confidence_scores or {}), **{field: 1.0 for field in provided}}
     if not missing and claim.status == "follow_up":
         claim.status = "ready_for_review"
 
