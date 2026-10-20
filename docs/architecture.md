@@ -57,12 +57,12 @@
 │                    AI SERVICES                          │
 │                                                         │
 │  ┌──────────────────────────────────────────────────┐  │
-│  │              OpenAI GPT-4o-mini                   │  │
+│  │      Groq LLM (OpenAI-compatible API)             │  │
 │  │                                                   │  │
 │  │  • Claim Information Extraction                   │  │
-│  │  • Missing Field Detection                        │  │
+│  │  • Customer Reply Understanding                   │  │
 │  │  • Follow-up Question Generation                  │  │
-│  │  • Structured JSON Output                         │  │
+│  │  • JSON output, validated before use              │  │
 │  └──────────────────────────────────────────────────┘  │
 └────────────────────────┬────────────────────────────────┘
                          │
@@ -77,10 +77,11 @@
 │  │          │ │  tions   │ │  sations │ │  assess-  │  │
 │  │          │ │          │ │          │ │  ments    │  │
 │  └──────────┘ └──────────┘ └──────────┘ └───────────┘  │
-│  ┌──────────┐ ┌──────────┐                             │
-│  │  claim   │ │  audit   │                             │
-│  │  actions │ │  logs    │                             │
-│  └──────────┘ └──────────┘                             │
+│  ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌───────────┐  │
+│  │  claim   │ │  audit   │ │  claim   │ │   users   │  │
+│  │  actions │ │  logs    │ │  attach- │ │           │  │
+│  │          │ │          │ │  ments   │ │           │  │
+│  └──────────┘ └──────────┘ └──────────┘ └───────────┘  │
 └─────────────────────────────────────────────────────────┘
 ```
 
@@ -89,33 +90,30 @@
 ### Claim Submission Flow
 
 ```
-1. Customer submits form
+1. Customer submits form (public)
    ↓
 2. POST /api/claims → Claim stored (status: submitted)
+   POST /api/claims/{id}/attachments → documents stored (optional)
    ↓
-3. POST /api/agent/extract/{id}
+3. Background AI pipeline
+   ├─ AI extraction (LLM) → validated, empty claim fields auto-filled
+   ├─ Missing required fields computed in code
+   ├─ Risk scoring (0-100, deterministic rules)
+   └─ Missing fields? → follow-up questions (LLM, template fallback)
    ↓
-4. AI extracts structured data from raw description
+4. Status: follow_up (waiting for the customer) or under_review
    ↓
-5. Missing fields detected?
-   ├─ Yes → POST /api/agent/follow-up/{id}
-   │        Agent generates questions
-   │        Customer responds via POST /api/agent/respond/{id}
-   │        Extraction updated
-   │        Repeat until complete
-   └─ No → Status: ready_for_review
+5. Ops agent records the customer's reply → POST /api/agent/respond/{id}
+   Extraction updated, status → ready_for_review when complete
    ↓
-6. POST /api/risk/assess/{id}
-   ↓
-7. Risk scoring (0-100) with signals
-   ↓
-8. Status: under_review
-   ↓
-9. Human reviews and takes action
-   ├─ Approve
-   ├─ Reject
-   └─ Escalate
+6. Human decision (authenticated) → PUT /api/claims/{id}/action
+   ├─ Approve (high risk: escalation + second reviewer + justification)
+   ├─ Reject (note required)
+   ├─ Escalate
+   └─ Request info
 ```
+
+Every step writes to the audit trail (GET /api/claims/{id}/audit).
 
 ## Database Schema
 
@@ -127,6 +125,8 @@ claims (1) ──── (0..*) conversations
 claims (1) ──── (1) risk_assessments
 claims (1) ──── (0..*) claim_actions
 claims (1) ──── (0..*) audit_logs
+claims (1) ──── (0..*) claim_attachments
+users            (operations accounts, JWT auth)
 ```
 
 ### Key Design Decisions

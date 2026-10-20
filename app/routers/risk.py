@@ -6,15 +6,17 @@ from sqlalchemy import select
 from app.database import get_db
 from app.models.risk_assessment import RiskAssessment
 from app.schemas.risk import RiskAssessmentResponse
-from app.services import risk_engine, audit_service
+from app.security import get_current_user
+from app.services import risk_engine
+from app.services.claim_service import get_claim_or_404
 
-router = APIRouter(prefix="/api/risk", tags=["risk"])
+router = APIRouter(prefix="/api/risk", tags=["risk"], dependencies=[Depends(get_current_user)])
 
 
 @router.post("/assess/{claim_id}", response_model=RiskAssessmentResponse)
 async def assess_risk(claim_id: UUID, db: AsyncSession = Depends(get_db)):
-    assessment = await risk_engine.assess_risk(db, claim_id)
-    return assessment
+    claim = await get_claim_or_404(db, claim_id)
+    return await risk_engine.assess_risk(db, claim)
 
 
 @router.get("/{claim_id}", response_model=RiskAssessmentResponse)

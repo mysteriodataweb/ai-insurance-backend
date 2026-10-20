@@ -1,10 +1,10 @@
 import uuid
-from datetime import datetime
 from sqlalchemy import Column, String, Text, Date, DateTime, Numeric, Enum as SAEnum
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 
 from app.database import Base
+from app.timeutils import utcnow
 
 
 class Claim(Base):
@@ -31,11 +31,12 @@ class Claim(Base):
         default="unrated",
         nullable=False,
     )
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime, default=utcnow, nullable=False)
+    updated_at = Column(DateTime, default=utcnow, onupdate=utcnow, nullable=False)
 
     extraction = relationship("ClaimExtraction", back_populates="claim", uselist=False)
     conversations = relationship("Conversation", back_populates="claim", order_by="Conversation.created_at")
     risk_assessment = relationship("RiskAssessment", back_populates="claim", uselist=False)
     actions = relationship("ClaimAction", back_populates="claim", order_by="ClaimAction.created_at.desc()")
     audit_logs = relationship("AuditLog", back_populates="claim", order_by="AuditLog.created_at.desc()")
+    attachments = relationship("ClaimAttachment", back_populates="claim", order_by="ClaimAttachment.created_at")

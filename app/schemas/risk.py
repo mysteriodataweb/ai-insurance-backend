@@ -1,7 +1,7 @@
-from datetime import datetime
-from typing import Optional
 from uuid import UUID
 from pydantic import BaseModel
+
+from app.schemas.common import UTCDateTime
 
 
 class RiskAssessmentResponse(BaseModel):
@@ -12,6 +12,6 @@ class RiskAssessmentResponse(BaseModel):
     signals: list
     explanation: str
     recommended_action: str
-    created_at: datetime
+    created_at: UTCDateTime
 
     model_config = {"from_attributes": True}

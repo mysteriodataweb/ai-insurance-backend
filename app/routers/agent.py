@@ -1,22 +1,34 @@
 from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
 from app.models.conversation import Conversation
-from app.models.extraction import ClaimExtraction
-from app.schemas.extraction import ExtractionResponse
+from app.rate_limit import rate_limit
 from app.schemas.conversation import ConversationMessage, CustomerResponseRequest
-from app.services import ai_agent, audit_service
+from app.schemas.extraction import ExtractionResponse
+from app.security import get_current_user
+from app.services import ai_agent
+from app.services.claim_service import get_claim_or_404
 
-router = APIRouter(prefix="/api/agent", tags=["agent"])
+router = APIRouter(prefix="/api/agent", tags=["agent"], dependencies=[Depends(get_current_user)])
+
+# Calls that hit the paid/quota-limited AI provider.
+ai_rate_limit = rate_limit(30, 600)
 
 
-@router.post("/extract/{claim_id}", response_model=ExtractionResponse)
+@router.post("/extract/{claim_id}", response_model=ExtractionResponse, dependencies=[Depends(ai_rate_limit)])
 async def extract_claim(claim_id: UUID, db: AsyncSession = Depends(get_db)):
-    extraction = await ai_agent.run_extraction(db, claim_id)
-    await audit_service.log_event(db, claim_id, "ai_extraction_completed", {"extraction_id": str(extraction.id)}, "ai_agent")
+    claim = await get_claim_or_404(db, claim_id)
+    return await ai_agent.run_extraction(db, claim)
+
+
+@router.get("/extraction/{claim_id}", response_model=ExtractionResponse)
+async def get_extraction(claim_id: UUID, db: AsyncSession = Depends(get_db)):
+    extraction = await ai_agent.get_extraction(db, claim_id)
+    if extraction is None:
+        raise HTTPException(status_code=404, detail="Extraction not found")
     return extraction
 
 
@@ -28,14 +40,14 @@ async def get_conversation(claim_id: UUID, db: AsyncSession = Depends(get_db)):
     return list(result.scalars().all())
 
 
-@router.post("/follow-up/{claim_id}")
+@router.post("/follow-up/{claim_id}", dependencies=[Depends(ai_rate_limit)])
 async def trigger_follow_up(claim_id: UUID, db: AsyncSession = Depends(get_db)):
-    questions = await ai_agent.generate_follow_up_questions(db, claim_id)
-    await audit_service.log_event(db, claim_id, "follow_up_generated", {"questions_count": len(questions)}, "ai_agent")
+    claim = await get_claim_or_404(db, claim_id)
+    questions = await ai_agent.generate_follow_up_questions(db, claim)
     return {"questions": questions}
 
 
-@router.post("/respond/{claim_id}")
+@router.post("/respond/{claim_id}", dependencies=[Depends(ai_rate_limit)])
 async def customer_respond(claim_id: UUID, data: CustomerResponseRequest, db: AsyncSession = Depends(get_db)):
-    result = await ai_agent.process_customer_response(db, claim_id, data.message)
-    return result
+    claim = await get_claim_or_404(db, claim_id)
+    return await ai_agent.process_customer_response(db, claim, data.message)

@@ -1,7 +1,7 @@
-from datetime import datetime
-from typing import Optional
 from uuid import UUID
 from pydantic import BaseModel
+
+from app.schemas.common import UTCDateTime
 
 
 class AuditLogResponse(BaseModel):
@@ -10,6 +10,6 @@ class AuditLogResponse(BaseModel):
     event_type: str
     event_data: dict
     actor: str
-    created_at: datetime
+    created_at: UTCDateTime
 
     model_config = {"from_attributes": True}

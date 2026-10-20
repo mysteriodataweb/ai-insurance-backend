@@ -1,8 +1,8 @@
 from uuid import UUID
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.audit_log import AuditLog
-from app.models.claim import Claim
 
 
 async def log_event(
@@ -12,6 +12,7 @@ async def log_event(
     event_data: dict,
     actor: str = "system",
 ) -> AuditLog:
+    """Adds the event to the current transaction; the caller commits it with the change it records."""
     audit = AuditLog(
         claim_id=claim_id,
         event_type=event_type,
@@ -24,7 +25,6 @@ async def log_event(
 
 
 async def get_audit_logs(db: AsyncSession, claim_id: UUID) -> list[AuditLog]:
-    from sqlalchemy import select
     result = await db.execute(
         select(AuditLog)
         .where(AuditLog.claim_id == claim_id)
